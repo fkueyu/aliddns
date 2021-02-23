@@ -1,3 +1,5 @@
+Fork自https://github.com/TreviD/aliddns
+修改了IPv6获取方式，配合群晖已经不再报错。谢谢原作者，以下为原作者的说明。
 # aliddns
 aliddns by python
 

@@ -10,15 +10,15 @@ from urllib.parse import quote
 from urllib import error
 from _sha1 import sha1
 import time
-from datetime import datetime,timezone
-import sys
+from datetime import datetime, timezone
 import os
 import ssl
 import argparse
+import subprocess
 
-# author: TreviD
-# date: 2020-02-21
-# version: v0.2
+# author: fkueyu
+# date: 2021-02-22
+# version: v0.1
 
 aliddnsipv6_ak = "AccessKeyId"
 aliddnsipv6_sk = "Access Key Secret"
@@ -45,10 +45,10 @@ def getSignature(params):
     list.sort()
     CanonicalizedQueryString = '&'.join(list)
     # print("strlist:" + CanonicalizedQueryString)
-    StringToSign = 'GET' + '&' + percentEncode("/") + "&" + percentEncode(CanonicalizedQueryString)
+    StringToSign = 'GET' + '&' + \
+        percentEncode("/") + "&" + percentEncode(CanonicalizedQueryString)
     # print("StringToSign:" + StringToSign)
-    h = hmac.new(bytes(aliddnsipv6_sk + "&", encoding="utf8"),
-                 bytes(StringToSign, encoding="utf8"), sha1)
+    h = hmac.new(bytes(aliddnsipv6_sk + "&", encoding="utf8"),bytes(StringToSign, encoding="utf8"), sha1)
     signature = base64.encodebytes(h.digest()).strip()
     signature = str(signature, encoding="utf8")
     # print(signature)
@@ -73,7 +73,7 @@ def get_record_info(SubDomain, DomainName, Type):
     # formatTime = time.strftime(
     # "%Y-%m-%dT%H:%M:%SZ", time.localtime(time.time() - 8 * 60 * 60))
     utc_dt = datetime.utcnow().replace(tzinfo=timezone.utc)
-    formatTime=utc_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    formatTime = utc_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     params['Timestamp'] = formatTime
     params['SignatureNonce'] = timestamp
 
@@ -119,7 +119,7 @@ def add_domain_record(DomainName, RR, Type, Value):
     # formatTime = time.strftime(
     # "%Y-%m-%dT%H:%M:%SZ", time.localtime(time.time() - 8 * 60 * 60))
     utc_dt = datetime.utcnow().replace(tzinfo=timezone.utc)
-    formatTime=utc_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    formatTime = utc_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     # formatTime = formatTime.replace(":", "%3A")
     params['Timestamp'] = formatTime
     params['SignatureNonce'] = timestamp
@@ -166,7 +166,7 @@ def update_domain_record(RecordId, RR, Value, Type):
     # formatTime = time.strftime(
     # "%Y-%m-%dT%H:%M:%SZ", time.localtime(time.time() - 8 * 60 * 60))
     utc_dt = datetime.utcnow().replace(tzinfo=timezone.utc)
-    formatTime=utc_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+    formatTime = utc_dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     params['Timestamp'] = formatTime
     params['SignatureNonce'] = timestamp
 
@@ -198,91 +198,26 @@ def percentEncode(str):
     res = res.replace('%7E', '~')
     return res
 
-
-def get_Local_ipv6_address_win():
-    """
-        Get local ipv6
-    """
-    # pageURL = 'https://ip.zxinc.org/ipquery/'
-    # pageURL = 'https://ip.sb/'
-    pageURL = 'https://api-ipv6.ip.sb/ip'
-    content = urllib.request.urlopen(pageURL).read()
-    webContent = content.decode("utf8")
-
-    print(webContent)
-    ipv6_pattern = '(([a-f0-9]{1,4}:){7}[a-f0-9]{1,4})'
-
-    m = re.search(ipv6_pattern, webContent)
-
-    if m is not None:
-        return m.group()
-    else:
-        return None
-
-
-def get_Local_ipv6_address_win2():
-    """
-        Get local ipv6
-    """
-    # pageURL = 'https://ip.zxinc.org/ipquery/'
-    linelist = os.popen(''' ipconfig ''').readlines()
-    webContent = ""
-    for item in linelist:
-        webContent += item
-
-    print(linelist)
-    ipv6_pattern = '(([a-f0-9]{1,4}:){7}[a-f0-9]{1,4})'
-
-    m = re.search(ipv6_pattern, webContent)
-
-    if m is not None:
-        return m.group()
-    else:
-        return None
-
-
-def get_Local_ipv6_address_linux():
-    """
-        Get local ipv6
-    """
-    # pageURL = 'https://ip.zxinc.org/ipquery/'
-    # pageURL = 'https://ip.sb/'
-    linelist = os.popen(
-        ''' ip addr show eth0 | grep "inet6.*global" | awk \'{print $2}\' | awk -F"/" \'{print $1}\' ''').readlines()  # 这个返回值是一个list
-    if linelist:
-        content = linelist[0].strip()
-    else:
-        return None
-    ipv6_pattern = '(([a-f0-9]{1,4}:){7}[a-f0-9]{1,4})'
-
-    m = re.search(ipv6_pattern, content)
-
-    if m is not None:
-        return m.group()
-    else:
-        return None
-
-
 def get_ipv4_net():
     context = ssl._create_unverified_context()
-    res = urllib.request.urlopen("https://api-ipv4.ip.sb/jsonip", context=context)
+    res = urllib.request.urlopen(
+        "https://api-ipv4.ip.sb/jsonip", context=context)
     return json.loads(res.read().decode('utf8'))['ip']
 
 
 def get_local_ipv6():
     sysPlatform = sys.platform
-    ipv6Addr = ""
-    ipv6Addr = get_Local_ipv6_address_win()
-    
-    if ipv6Addr == None:
-        if sysPlatform == "linux":
-            ipv6Addr = get_Local_ipv6_address_linux()
-            print()
-        elif sysPlatform == "win32":
-            ipv6Addr = get_Local_ipv6_address_win2()
-        else:
-            ipv6Addr = get_Local_ipv6_address_win()
-    return ipv6Addr
+    if sysPlatform == "linux":
+        getIPV6_process=subprocess.Popen("ifconfig", stdout = subprocess.PIPE)
+    else:
+        getIPV6_process=subprocess.Popen("ipconfig", stdout = subprocess.PIPE)
+    output = (getIPV6_process.stdout.read())
+    ipv6_pattern = '(([a-f0-9]{1,4}:){7}[a-f0-9]{1,4})'
+    m = re.search(ipv6_pattern, str(output))
+    if m is not None:
+        return m.group()
+    else:
+        return None
 
 
 if __name__ == '__main__':
@@ -292,7 +227,8 @@ if __name__ == '__main__':
     # parser.add_argument("key", help="从https://ak-console.aliyun.com/#/accesskey得到的AccessKeyId", type=str)
     # parser.add_argument("secret", help="从https://ak-console.aliyun.com/#/accesskey得到的AccessKeySecret", type=str)
     parser.add_argument("RR", help="RR例子：@, *, www, ...", type=str)
-    parser.add_argument("DomainName", help="domain例子: aliyun.com, baidu.com, google.com, ...", type=str)
+    parser.add_argument(
+        "DomainName", help="domain例子: aliyun.com, baidu.com, google.com, ...", type=str)
     parser.add_argument("Type", help="类型(A/AAAA)", type=str)
     parser.add_argument("--value", help="[value]", type=str)
     args = parser.parse_args()
